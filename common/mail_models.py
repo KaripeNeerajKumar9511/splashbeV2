@@ -36,18 +36,18 @@ def get_default_templates():
     return {
         SLUG_REGISTRATION_USER: {
             "name": "Registration – Thank you (to user)",
-            "description": "Sent to the user after they register.",
-            "subject": "Welcome to Splash!",
+            "description": "Sent to the user after they verify their email.",
+            "subject": "Welcome to Splash AI Studios!",
             "body_plain": """Hello {{user_name}},
 
-Welcome to Splash! Your account has been successfully created.
+Your account has been successfully created on Splash AI Studios.
 
-You can now log in and start using our platform.
+You can now log in and start creating stunning jewelry visuals with our AI-powered tools.
 
-If you have any questions, please don't hesitate to contact us.
+Log in here: {{login_url}}
 
-Best regards,
-The Splash Team""",
+Thanks,
+Splash AI Studios""",
         },
         SLUG_REGISTRATION_ADMIN: {
             "name": "Registration – New user notification (to admin)",

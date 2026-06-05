@@ -10,50 +10,68 @@ import secrets
 import string
 from datetime import datetime
 
-# Portal color palette and branding for emails
-EMAIL_PRIMARY = "#6d28d9"
-EMAIL_PRIMARY_LIGHT = "#8b5cf6"
-EMAIL_BG = "#f8fafc"
-EMAIL_CARD_BG = "#ffffff"
-EMAIL_TEXT = "#171717"
-EMAIL_TEXT_MUTED = "#64748b"
-EMAIL_BORDER = "#e2e8f0"
-PORTAL_NAME = "Splash"
+# Portal color palette and branding for emails (matches Splash AI Studios portal)
+EMAIL_PRIMARY = "#c9a84c"
+EMAIL_PRIMARY_LIGHT = "#f1d37a"
+EMAIL_BG = "#0e0d09"
+EMAIL_CARD_BG = "#161410"
+EMAIL_TEXT = "#f2edd8"
+EMAIL_TEXT_MUTED = "rgba(242, 237, 216, 0.58)"
+EMAIL_BORDER = "rgba(201, 168, 76, 0.28)"
+PORTAL_NAME = "Splash AI Studios"
 
-# common/email_utils.py
 import random
-from django.core.mail import send_mail
-from django.conf import settings
 
 def generate_otp():
     return str(random.randint(100000, 999999))
 
 
-def send_email_otp(email, otp, name=None):
-    subject = "Verify your email"
-    message = f"""
-Hi {name or ''},
-
-Your email verification OTP is: {otp}
-
-This OTP is valid for 10 minutes.
-Do not share it with anyone.
-
-Thanks,
-Team
-"""
-    send_mail(
-        subject,
-        message,
-        settings.DEFAULT_FROM_EMAIL,
-        [email],
-        fail_silently=False,
-    )
-
 def get_logo_url():
     """Base URL for logo image in emails (must be absolute)."""
     base = getattr(settings, "FRONTEND_URL", "") or "http://localhost:3000"
-    return base.rstrip("/") + "/images/logo-splash.png"
+    return base.rstrip("/") + "/images/SplashLogoPNG.png"
+
+
+def get_email_signoff_html():
+    return (
+        f'<p style="margin: 24px 0 0 0; color: {EMAIL_TEXT}; font-size: 15px; line-height: 1.6;">'
+        f"Thanks,<br><strong style=\"color: {EMAIL_PRIMARY};\">{PORTAL_NAME}</strong></p>"
+    )
+
+
+def get_email_signoff_plain():
+    return f"\n\nThanks,\n{PORTAL_NAME}"
+
+
+def send_email_otp(email, otp, name=None):
+    """Send OTP verification email using the branded portal HTML template."""
+    display_name = name or "there"
+    subject = f"Verify your email – {PORTAL_NAME}"
+
+    body_plain = f"""Hi {display_name},
+
+Your email verification code is: {otp}
+
+This code is valid for 10 minutes.
+Do not share it with anyone.{get_email_signoff_plain()}"""
+
+    body_html_content = f"""
+<p style="margin: 0 0 16px 0; color: {EMAIL_TEXT};">Hi {display_name},</p>
+<p style="margin: 0 0 20px 0; color: {EMAIL_TEXT_MUTED};">
+  Use the verification code below to complete your signup on {PORTAL_NAME}.
+</p>
+<div style="margin: 24px 0; padding: 20px; text-align: center; border-radius: 14px; border: 1px solid {EMAIL_BORDER}; background: rgba(201, 168, 76, 0.08);">
+  <p style="margin: 0 0 8px 0; font-size: 12px; letter-spacing: 0.14em; text-transform: uppercase; color: {EMAIL_PRIMARY};">Verification code</p>
+  <p style="margin: 0; font-size: 32px; font-weight: 700; letter-spacing: 0.35em; color: {EMAIL_TEXT};">{otp}</p>
+</div>
+<p style="margin: 0; color: {EMAIL_TEXT_MUTED}; font-size: 14px; line-height: 1.6;">
+  This code expires in <strong style="color: {EMAIL_TEXT};">10 minutes</strong>.
+  If you did not request this, you can safely ignore this email.
+</p>
+{get_email_signoff_html()}"""
+
+    html = get_base_email_html(body_html_content, "Verify your email")
+    return _send_html_email(subject, body_plain, html, [email])
 
 
 def get_base_email_html(content_body, title=""):
@@ -64,7 +82,11 @@ def get_base_email_html(content_body, title=""):
     """
     logo_url = get_logo_url()
     frontend_url = getattr(settings, "FRONTEND_URL", "") or ""
-    title_block = f'<h2 style="color: {EMAIL_TEXT}; font-size: 20px; margin: 0 0 16px 0;">{title}</h2>' if title else ""
+    title_block = (
+        f'<h2 style="color: {EMAIL_TEXT}; font-size: 22px; font-weight: 700; margin: 0 0 18px 0; letter-spacing: -0.02em;">{title}</h2>'
+        if title
+        else ""
+    )
     return f"""
 <!DOCTYPE html>
 <html>
@@ -77,16 +99,16 @@ def get_base_email_html(content_body, title=""):
   <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background-color: {EMAIL_BG};">
     <tr>
       <td align="center" style="padding: 32px 16px;">
-        <table role="presentation" width="100%" style="max-width: 560px; background-color: {EMAIL_CARD_BG}; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border: 1px solid {EMAIL_BORDER};">
+        <table role="presentation" width="100%" style="max-width: 560px; background-color: {EMAIL_CARD_BG}; border-radius: 16px; box-shadow: 0 18px 48px rgba(0,0,0,0.35); border: 1px solid {EMAIL_BORDER};">
           <tr>
-            <td style="padding: 24px 24px 16px 24px; border-bottom: 1px solid {EMAIL_BORDER};">
-              <a href="{frontend_url}" style="text-decoration: none;">
-                <img src="{logo_url}" alt="{PORTAL_NAME}" style="max-height: 40px; display: block;" />
+            <td style="padding: 28px 28px 18px 28px; border-bottom: 1px solid {EMAIL_BORDER}; text-align: center;">
+              <a href="{frontend_url}" style="text-decoration: none; display: inline-block;">
+                <img src="{logo_url}" alt="{PORTAL_NAME}" style="max-height: 52px; width: auto; display: block; margin: 0 auto;" />
               </a>
             </td>
           </tr>
           <tr>
-            <td style="padding: 24px; color: {EMAIL_TEXT}; font-size: 16px; line-height: 1.6;">
+            <td style="padding: 28px; color: {EMAIL_TEXT}; font-size: 16px; line-height: 1.6;">
               {title_block}
               <div style="color: {EMAIL_TEXT};">
                 {content_body}
@@ -94,8 +116,9 @@ def get_base_email_html(content_body, title=""):
             </td>
           </tr>
           <tr>
-            <td style="padding: 16px 24px; border-top: 1px solid {EMAIL_BORDER}; font-size: 12px; color: {EMAIL_TEXT_MUTED};">
-              This email was sent by {PORTAL_NAME}. If you have questions, contact support.
+            <td style="padding: 18px 28px 24px 28px; border-top: 1px solid {EMAIL_BORDER}; font-size: 12px; color: {EMAIL_TEXT_MUTED}; text-align: center; line-height: 1.6;">
+              This email was sent by {PORTAL_NAME}.<br>
+              Thanks, <strong style="color: {EMAIL_PRIMARY};">{PORTAL_NAME}</strong>
             </td>
           </tr>
         </table>
@@ -183,25 +206,48 @@ def _send_from_template(slug, recipient_list, context, fallback_subject, fallbac
 
 
 def send_registration_email(user_email, user_name=None):
-    """Send welcome email after user registration (uses template if set)."""
+    """Send welcome email after account verification using the branded portal HTML template."""
     name = user_name or "User"
-    context = {"user_name": name}
-    fallback_subject = "Welcome to Splash!"
-    fallback_body = f"""
-Hello {name},
+    frontend_url = (getattr(settings, "FRONTEND_URL", "") or "http://localhost:3000").rstrip("/")
+    login_url = f"{frontend_url}/login"
 
-Welcome to Splash! Your account has been successfully created.
+    context = {"user_name": name, "login_url": login_url}
+    template = _get_template("registration_user")
+    if template:
+        subject = _render_template(template.subject, context) or f"Welcome to {PORTAL_NAME}!"
+    else:
+        subject = f"Welcome to {PORTAL_NAME}!"
 
-You can now log in and start using our platform.
+    body_plain = f"""Hello {name},
 
-If you have any questions, please don't hesitate to contact us.
+Your account has been successfully created on {PORTAL_NAME}.
 
-Best regards,
-The Splash Team
-"""
-    return _send_from_template(
-        "registration_user", [user_email], context, fallback_subject, fallback_body
-    )
+You can now log in and start creating stunning jewelry visuals with our AI-powered tools.
+
+Log in here: {login_url}
+
+If you have any questions, please contact our support team.{get_email_signoff_plain()}"""
+
+    body_html_content = f"""
+<p style="margin: 0 0 16px 0; color: {EMAIL_TEXT};">Hello {name},</p>
+<p style="margin: 0 0 16px 0; color: {EMAIL_TEXT_MUTED};">
+  Your account has been successfully created on <strong style="color: {EMAIL_TEXT};">{PORTAL_NAME}</strong>.
+</p>
+<p style="margin: 0 0 24px 0; color: {EMAIL_TEXT_MUTED};">
+  You can now log in and start creating stunning jewelry visuals with our AI-powered tools.
+</p>
+<p style="margin: 0 0 24px 0; text-align: center;">
+  <a href="{login_url}" style="display: inline-block; padding: 12px 24px; border-radius: 999px; background: linear-gradient(135deg, {EMAIL_PRIMARY}, {EMAIL_PRIMARY_LIGHT}); color: #11100d; font-size: 14px; font-weight: 700; text-decoration: none;">
+    Log in to your account
+  </a>
+</p>
+<p style="margin: 0; color: {EMAIL_TEXT_MUTED}; font-size: 14px;">
+  If you have any questions, please contact our support team.
+</p>
+{get_email_signoff_html()}"""
+
+    html = get_base_email_html(body_html_content, "Account created successfully")
+    return _send_html_email(subject, body_plain, html, [user_email])
 
 
 def send_registration_admin_email(user_email, user_name=None, user_username=None):

@@ -267,14 +267,14 @@ CSRF_TRUSTED_ORIGINS = [
 CSRF_COOKIE_SECURE = False
 SESSION_COOKIE_SECURE = False
 
-# Email Configuration (SMTP)
+# Email Configuration (SMTP) — load_dotenv above ensures os.environ is populated from backend/.env
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
-DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
+EMAIL_HOST = os.getenv('EMAIL_HOST') or config('EMAIL_HOST', default='smtp.hostinger.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT') or config('EMAIL_PORT', default=587))
+EMAIL_USE_TLS = (os.getenv('EMAIL_USE_TLS') or str(config('EMAIL_USE_TLS', default=True))).lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER') or config('EMAIL_HOST_USER', default='')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD') or config('EMAIL_HOST_PASSWORD', default='')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL') or config('DEFAULT_FROM_EMAIL', default=EMAIL_HOST_USER)
 ADMIN_EMAIL = config("ADMIN_EMAIL", default="")
 ADMIN_EMAIL = [email.strip() for email in ADMIN_EMAIL.split(",") if email]
 

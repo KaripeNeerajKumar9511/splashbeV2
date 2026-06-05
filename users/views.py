@@ -123,27 +123,71 @@ def register_user(request):
         # Use UTC naive datetime for consistency with MongoDB
         otp_expiry = datetime.datetime.utcnow() + timedelta(minutes=10)
 
-        user = User(
-            email=email,
-            password=hashed_pw,
-            full_name=full_name,
-            username=username,
-            role=role,
-            credit_balance=5,
-            profile_completed=True,
-            is_email_verified=False,
-            email_otp=otp,
-            email_otp_expires_at=otp_expiry,
-        )
-        user.save()
+        existing_user = User.objects(email=email).first()
+        if existing_user:
+            if existing_user.is_email_verified:
+                return Response(
+                    {
+                        "error": "An account with this email already exists. Please log in instead.",
+                    },
+                    status=400,
+                )
 
-        # Send OTP email
-        send_email_otp(user.email, otp, user.full_name or user.username)
+            if username:
+                username_taken = User.objects(username=username).first()
+                if username_taken and str(username_taken.id) != str(existing_user.id):
+                    return Response(
+                        {"error": "Username already taken. Please choose a different username."},
+                        status=400,
+                    )
+                existing_user.username = username
+
+            existing_user.password = hashed_pw
+            if full_name:
+                existing_user.full_name = full_name
+            if role:
+                existing_user.role = role
+            existing_user.email_otp = otp
+            existing_user.email_otp_expires_at = otp_expiry
+            existing_user.save()
+            user = existing_user
+        else:
+            if username and User.objects(username=username).first():
+                return Response(
+                    {"error": "Username already taken. Please choose a different username."},
+                    status=400,
+                )
+
+            user = User(
+                email=email,
+                password=hashed_pw,
+                full_name=full_name,
+                username=username,
+                role=role,
+                credit_balance=10,
+                profile_completed=True,
+                is_email_verified=False,
+                email_otp=otp,
+                email_otp_expires_at=otp_expiry,
+            )
+            user.save()
+
+        email_sent = True
+        try:
+            send_email_otp(user.email, otp, user.full_name or user.username)
+        except Exception as email_error:
+            email_sent = False
+            print(f"Failed to send OTP email to {user.email}: {email_error}")
 
         return JsonResponse(
             {
-                "message": "OTP sent to email. Please verify to complete signup.",
+                "message": (
+                    "OTP sent to email. Please verify to complete signup."
+                    if email_sent
+                    else "Account created, but we couldn't send the verification email. Use Resend OTP to try again."
+                ),
                 "user_id": str(user.id),
+                "email_sent": email_sent,
             },
             status=201,
         )
@@ -151,8 +195,8 @@ def register_user(request):
     except NotUniqueError:
         return Response({"error": "Email or username already exists"}, status=400)
     except Exception as e:
-        print(e)
-        return JsonResponse({"error": str(e)}, status=500)
+        print("REGISTER USER ERROR:", e)
+        return JsonResponse({"error": "Registration failed. Please try again."}, status=500)
 
 @api_view(['POST'])
 def verify_email_otp(request):
@@ -191,6 +235,11 @@ def verify_email_otp(request):
         user.email_otp = None
         user.email_otp_expires_at = None
         user.save()
+
+        try:
+            send_registration_email(user.email, user.full_name or user.username)
+        except Exception as welcome_error:
+            print(f"Failed to send welcome email to {user.email}: {welcome_error}")
 
         token = generate_jwt(user)
 
